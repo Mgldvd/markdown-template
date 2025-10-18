@@ -1,6 +1,10 @@
 # Markdown Template
 # 📄 Technical Specification: Dynamic Markdown Template System (Extended Mustache Model)
 
+<div align="center">
+  <img src="img/example.png" alt="Markdown Template" width="100%">
+</div>
+
 ## 1. Objective
 
 Define the standard format for creating **dynamic Markdown templates** using an extended **Mustache** syntax.
