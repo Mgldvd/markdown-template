@@ -64,7 +64,7 @@ Each line defines one variable using the following syntax:
 |Parameter|Description|Required|
 |---|---|---|
 |`variableName`|Unique variable identifier. Cannot contain spaces or underscores (`_`). Use *camelCase* for multi-word names (e.g., `fullName`).|✅|
-|`type`|Field type (`text`, `textarea`, `date`, etc.).|✅|
+|`type`|Field type (`text`, `textarea`, `date`, `select`, etc.).|✅|
 |`length`|Maximum number of allowed characters.|Optional|
 |`width`|Minimum visual width of the field (supports CSS units).|Optional|
 |`regex`|Regular expression defining the valid input format.|Optional|
@@ -160,6 +160,22 @@ A field is considered **required** if its definition ends with a space followed 
 {{ ipAddress | text | 15 | 200px | ^(?:\d{1,3}\.){3}\d{1,3}$ }}
 {{ fullName | text | 100 | 50 ?}}
 ```
+
+---
+
+### 3.6. Select Options (`type = select`)
+
+- Use the third parameter to declare the list of selectable options as an **array** following the format `[key:value, key:value, ...]`.
+- Each `key` is the submitted data, while `value` is the human-readable caption rendered in the form.
+- Additional parameters such as `width` or the required marker (`?`) can still be appended as usual. `regex` is not applied to select fields.
+
+#### Example:
+
+```
+{{ paymentStatus | select | [pending:Pending, paid:Paid, rejected:Rejected] | 40 ?}}
+```
+
+> The example above renders a select input with three options and marks the field as required while keeping a minimum visual width of `40`.
 
 ---
 
@@ -266,6 +282,7 @@ Sincerely,
 |`number`|Numeric input.|`"25"`|
 |`email`|Email address.|`"laura@example.com"`|
 |`address`|Address or long text.|`"Condor Avenue 8"`|
+|`select`|Select input backed by an options array in the format `[key:value, ...]`.|`"pending" → "Pending"`|
 |`boolean`|Checkbox (yes/no).|`true` / `false`|
 
 **Note:** The system should support additional future field types such as `phone`, `url`, `currency`, `signature`, etc.
