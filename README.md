@@ -56,8 +56,11 @@ This section contains the list of variables used or anticipated in the template.
 Each line defines one variable using the following syntax:
 
 ```
-{{ variableName | type | length | width | regex }}
+{{ variableName | type | length | width | regex | key=value | key=value }}
 ```
+
+The first segment is always the **variable name**, followed by positional parameters (`type`, `length`, `width`, `regex`).
+Additional named attributes can be appended afterwards as `key=value` pairs to keep the syntax expressive yet readable.
 
 ### Parameters
 
@@ -68,6 +71,7 @@ Each line defines one variable using the following syntax:
 |`length`|Maximum number of allowed characters.|Optional|
 |`width`|Minimum visual width of the field (supports CSS units).|Optional|
 |`regex`|Regular expression defining the valid input format.|Optional|
+|`key=value`|Additional named attributes (e.g., `height=40px`, `format=DD/MM/YYYY`).|Optional|
 
 ---
 
@@ -94,19 +98,20 @@ A field is considered **required** if its definition ends with a space followed 
 
 ---
 
-### 3.2. Parameter `width`
+### 3.2. Visual Dimensions (`width`, `height`)
 
-- Defines the **minimum visual width** of the input in the form.
-- Accepts numeric values or **valid CSS units** (`px`, `%`, `em`, `rem`, `vw`, etc.).
-- Affects only the visual display, not the text length limit.
+- `width` defines the **minimum visual width** of the input in the form.
+- `height` controls the **minimum visual height** for multiline or component-based fields (e.g., `textarea`, `select`).
+- Both accept numeric values or **valid CSS units** (`px`, `%`, `em`, `rem`, `vh`, etc.) and affect layout only — not the text length limit.
 
 #### Examples:
 
 ```
 {{ company | text | 200 | 60 }}
 {{ phone | text | 15 | 250px }}
-{{ address | textarea | 400 | 90% }}
-{{ comment | textarea | 500 | 40em ?}}
+{{ address | textarea | 400 | 90% | height=160px }}
+{{ paymentStatus | select | [pending:Pending, paid:Paid, rejected:Rejected] | 40 | height=3.5rem ?}}
+{{ comment | textarea | 500 | 40em | height=12rem ?}}
 ```
 
 ---
@@ -152,11 +157,12 @@ A field is considered **required** if its definition ends with a space followed 
 ### 3.5. Complete Variable Header Example
 
 ```
-{{ date | date }}
+{{ date | date | format=DD/MM/YYYY }}
 {{ company | text | 200 | 60 ?}}
-{{ address | address | 300 | 80% }}
+{{ address | textarea | 400 | 90% | height=160px }}
 {{ email | text | 255 | 60 | ^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$ ?}}
-{{ phone | text | 15 | 250px | ^\+\d{1,3}\s?\d{4,14}$ ?}}
+{{ phone | text | 15 | 250px | ^\+\d{1,3}\s?\d{4,14}$ | format=e164 ?}}
+{{ paymentStatus | select | [pending:Pending, paid:Paid, rejected:Rejected] | 40 | height=3.5rem | default=Pending }}
 {{ ipAddress | text | 15 | 200px | ^(?:\d{1,3}\.){3}\d{1,3}$ }}
 {{ fullName | text | 100 | 50 ?}}
 ```
@@ -179,6 +185,30 @@ A field is considered **required** if its definition ends with a space followed 
 
 ---
 
+### 3.7. Named Attributes (`format`, `default`, ...)
+
+- Named attributes use the `key=value` syntax inspired by embedded PDF tags (e.g., DocuSeal) while keeping the template readable.
+- They can appear after any positional parameter. The parser treats tokens containing `=` as name/value pairs regardless of order.
+- Unrecognized attributes should be stored so renderers can choose to honor them or expose them downstream.
+
+#### Common attributes
+
+|Attribute|Applies to|Example|Notes|
+|---|---|---|---|
+|`format`|`date`, `number`, `currency`, `phone`, `signature`|`format=DD/MM/YYYY`, `format=currency:usd`, `format=e164`, `format=drawn_or_typed`|Use human-readable patterns for dates, prefixed namespaces for complex cases (`currency:usd`). Aligns with parsing conventions from DocuSeal-style tags, but remains optional here.|
+|`default`|Any input|`default=Pending`|Pre-populates form fields while still allowing user edits unless combined with `readonly=true`.|
+|`placeholder`|Text inputs|`placeholder=Enter full name`|Displayed hint text in the UI, ignored in final output.|
+|`readonly`|Any input|`readonly=true`|Locks the field; useful for computed or externally managed values.|
+
+> Keep attribute names lowercase and values without surrounding quotes. Use CSS units (`px`, `rem`, `%`, etc.) for size-related attributes.
+
+#### `format` recommendations
+
+- **Dates:** support tokens such as `YYYY-MM-DD`, `DD/MM/YYYY`, or `MMMM D, YYYY`.
+- **Numbers & currency:** use `currency:<code>` (e.g., `currency:usd`, `currency:eur`) or `percentage` for percent-style rendering.
+- **Phone numbers:** prefer `format=e164` to ensure the `+` country prefix is enforced.
+- **Signatures:** restrict to `drawn`, `typed`, `drawn_or_typed`, or `upload` to mirror signer experience options.
+
 ## 4. Section 2 — Template Content
 
 After the `:---` separator, the Markdown body of the document is defined.
@@ -192,11 +222,11 @@ Variables declared in the first section, as well as new inline variables, may be
     ```
 2. **Extended inline use:**
     ```
-    {{ variable | type | length | width | regex }}
+  {{ variable | type | length | width | regex | key=value }}
     ```
 3. **Required inline field:**
     ```
-    {{ variable | type | length | width | regex ?}}
+  {{ variable | type | length | width | regex | key=value ?}}
     ```
 
 ---
@@ -210,7 +240,10 @@ Variables used in the body that **are not listed** in the header are considered 
 |`type`|`text`|
 |`length`|unlimited|
 |`width`|default size (e.g., 40)|
+|`height`|auto|
 |`regex`|none|
+|`format`|none|
+|`default`|`null`|
 |`required`|`false`|
 
 #### Valid examples:
@@ -228,10 +261,12 @@ Variables used in the body that **are not listed** in the header are considered 
 ## 5. Full Markdown Template Example
 
 ```md
-{{ date | date }}
+{{ date | date | format=DD/MM/YYYY }}
 {{ company | text | 200 | 60 ?}}
-{{ address | address | 300 | 80% }}
-{{ phone | text | 15 | 250px | ^\+\d{1,3}\s?\d{4,14}$ ?}}
+{{ address | textarea | 400 | 90% | height=160px }}
+{{ email | text | 255 | 60 | ^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$ ?}}
+{{ phone | text | 15 | 250px | ^\+\d{1,3}\s?\d{4,14}$ | format=e164 ?}}
+{{ paymentStatus | select | [pending:Pending, paid:Paid, rejected:Rejected] | 40 | height=3.5rem | default=Pending }}
 {{ fullName | text | 100 | 50 ?}}
 
 :---
@@ -242,10 +277,14 @@ Human Resources Department
 {{ company }}
 {{ address }}
 
+You can reach me at {{ email }} or {{ phone }} for any further information.
+
 Dear Sir or Madam,
 
 My name is {{ fullName }} and I am a {{ job }}.
 I am writing to express my interest in joining the {{ company }} team.
+
+Current status: {{ paymentStatus }}.
 
 Sincerely,
 {{ fullName }}
@@ -261,12 +300,15 @@ Sincerely,
 
 ```json
 [
-  {"variable": "date", "type": "date", "length": null, "width": null, "regex": null, "required": false},
-  {"variable": "company", "type": "text", "length": 200, "width": "60", "regex": null, "required": true},
-  {"variable": "address", "type": "address", "length": 300, "width": "80%", "regex": null, "required": false},
-  {"variable": "phone", "type": "text", "length": 15, "width": "250px", "regex": "^\+\d{1,3}\s?\d{4,14}$", "required": true},
-  {"variable": "fullName", "type": "text", "length": 100, "width": "50", "regex": null, "required": true},
-  {"variable": "signature", "type": "text", "length": null, "width": null, "regex": null, "required": false}
+  {"variable": "date", "type": "date", "length": null, "width": null, "height": null, "regex": null, "format": "DD/MM/YYYY", "default": null, "required": false},
+  {"variable": "company", "type": "text", "length": 200, "width": "60", "height": null, "regex": null, "format": null, "default": null, "required": true},
+  {"variable": "address", "type": "textarea", "length": 400, "width": "90%", "height": "160px", "regex": null, "format": null, "default": null, "required": false},
+  {"variable": "email", "type": "text", "length": 255, "width": "60", "height": null, "regex": "^[\\w.%+-]+@[\\w.-]+\\.[A-Za-z]{2,}$", "format": null, "default": null, "required": true},
+  {"variable": "phone", "type": "text", "length": 15, "width": "250px", "height": null, "regex": "^\\+\\d{1,3}\\s?\\d{4,14}$", "format": "e164", "default": null, "required": true},
+  {"variable": "paymentStatus", "type": "select", "length": null, "width": "40", "height": "3.5rem", "regex": null, "format": null, "default": "Pending", "required": false, "options": [{"key": "pending", "value": "Pending"}, {"key": "paid", "value": "Paid"}, {"key": "rejected", "value": "Rejected"}]},
+  {"variable": "ipAddress", "type": "text", "length": 15, "width": "200px", "height": null, "regex": "^(?:\\d{1,3}\\.){3}\\d{1,3}$", "format": null, "default": null, "required": false},
+  {"variable": "fullName", "type": "text", "length": 100, "width": "50", "height": null, "regex": null, "format": null, "default": null, "required": true},
+  {"variable": "signature", "type": "text", "length": null, "width": null, "height": null, "regex": null, "format": null, "default": null, "required": false}
 ]
 ```
 
@@ -301,7 +343,10 @@ Sincerely,
 - Parameters are separated by `|` (whitespace ignored).
 - Required fields end with a space and `?}}`.
 - `width` accepts CSS-compatible units (`px`, `%`, `em`, `rem`, `vw`, etc.).
+- `height` accepts the same CSS-compatible units and controls the vertical footprint of form controls.
 - `regex` defines formatting patterns (no delimiters).
+- Named attributes using `key=value` can be appended in any order after the positional parameters; parsers should capture unknown keys for extensibility.
+- `format` refines how data is displayed or validated (e.g., `DD/MM/YYYY`, `currency:usd`, `drawn_or_typed`).
 - Undefined variables are created automatically with default settings.
 
 ### Replacement
@@ -320,8 +365,8 @@ Sincerely,
 
 2. **Dynamic Form Rendering**
    - Generates form inputs based on variable types.
-   - Applies validations (`maxlength`, `required`, `width`, `regex`).
-   - Properly interprets CSS width units.
+  - Applies validations and presentation hints (`maxlength`, `required`, `width`, `height`, `regex`, `format`, `default`, etc.).
+  - Properly interprets CSS-based units for size as well as semantic format directives (dates, currency, phone, signature).
 
 3. **Final Rendering**
    - Replaces placeholders with user-provided values.
